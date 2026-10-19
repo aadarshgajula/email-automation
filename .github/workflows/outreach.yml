@@ -1,0 +1,68 @@
+name: outreach
+
+on:
+  # Every hour from 13:17 to 20:17 UTC, Monday-Friday
+  # (= 6:47pm to 1:47am IST). This covers 9am-noon on the US East
+  # and West coasts in summer and winter time. The script only emails
+  # people whose own local time is 9:00-11:59.
+  schedule:
+    - cron: "17 13-20 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "find = search for leads, preview = show next emails, test = email yourself, run = real send"
+        type: choice
+        default: preview
+        options: [find, preview, test, run]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: outreach
+  cancel-in-progress: false
+
+jobs:
+  outreach:
+    # Scheduled runs only happen after you set the repository variable
+    # OUTREACH_ENABLED to true. Manual runs always work.
+    if: github.event_name == 'workflow_dispatch' || vars.OUTREACH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      MODE: ${{ inputs.mode || 'run' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Find new leads
+        if: env.MODE == 'find' || env.MODE == 'run'
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: python find_leads.py ${{ env.MODE == 'find' && '--force' || '' }}
+
+      - name: Check replies and send
+        if: env.MODE != 'find'
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          SENDER_NAME: ${{ secrets.SENDER_NAME }}
+          SENDER_POSTAL_ADDRESS: ${{ secrets.SENDER_POSTAL_ADDRESS }}
+        run: python send.py
+
+      - name: Save progress
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          for f in leads.csv state.json; do [ -f "$f" ] && git add "$f"; done
+          if ! git diff --cached --quiet; then
+            git commit -m "outreach progress"
+            git push
+          fi
