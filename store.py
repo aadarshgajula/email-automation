@@ -11,8 +11,9 @@ STATE_FILE = "state.json"
 FIELDS = [
     "place_id", "business", "website", "email", "address", "lat", "lng", "timezone",
     "issue", "observation", "status", "found_at", "sent_at", "message_id",
-    "followup_at", "updated_at", "note",
+    "followup_at", "updated_at", "note", "niche",
 ]
+# niche: a key of config.NICHES (which email template the lead gets)
 # status values:
 #   ready        found, has an email, site has an issue -> will be emailed
 #   no_email     no email found on the site

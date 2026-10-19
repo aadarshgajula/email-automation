@@ -55,11 +55,13 @@ OSM_UA = {"User-Agent": "small-business-outreach/1.0 (one query per run)"}
 
 
 def osm_query(state):
+    """One query per state covering every niche in config.NICHES."""
     parts = []
-    for tag in config.OSM_TAGS:
-        k, v = tag.split("=", 1)
-        parts.append(f'nwr["{k}"="{v}"](area.a);')
-    parts.append(f'nwr["name"~"{config.OSM_NAME_PATTERN}",i](area.a);')
+    for niche in config.NICHES.values():
+        for tag in niche["tags"]:
+            k, v = tag.split("=", 1)
+            parts.append(f'nwr["{k}"="{v}"](area.a);')
+        parts.append(f'nwr["name"~"{niche["names"]}",i](area.a);')
     return (
         "[out:json][timeout:180];"
         f'area["ISO3166-2"="US-{state}"]["admin_level"="4"]->.a;'
@@ -87,14 +89,27 @@ def osm_search(state):
     return None
 
 
+def niche_of(tags, name):
+    """Which config.NICHES entry an OSM element belongs to, or None."""
+    for key, niche in config.NICHES.items():
+        if any(tags.get(t.split("=", 1)[0]) == t.split("=", 1)[1] for t in niche["tags"]):
+            return key
+        if re.search(niche["names"], name, re.I):
+            return key
+    return None
+
+
 def osm_to_place(el):
     """Turns an OSM element into a simple dict, or None if it isn't usable."""
     tags = el.get("tags", {})
     name = (tags.get("name") or "").strip()
     if not name or any(k in tags for k in ("highway", "railway", "waterway")):
         return None
+    niche = niche_of(tags, name)
+    if not niche:
+        return None
     low = name.lower() + " "
-    if any(x in low for x in config.NAME_EXCLUDE):
+    if any(x in low for x in config.NICHES[niche]["exclude"]):
         return None
     if tags.get("shop") in ("car", "car_repair", "car_parts", "boat", "motorcycle"):
         return None
@@ -114,6 +129,7 @@ def osm_to_place(el):
     return {
         "id": f"osm:{el.get('type')}/{el.get('id')}",
         "name": name,
+        "niche": niche,
         "website": website,
         "address": address,
         "lat": lat,
@@ -296,7 +312,7 @@ def main():
                   "to pick up businesses added to OpenStreetMap since.")
             break
         us_state = config.STATES[idx]
-        print(f"Searching OpenStreetMap: interior designers in {us_state}")
+        print(f"Searching OpenStreetMap: {', '.join(config.NICHES)} in {us_state}")
         elements = osm_search(us_state)
         if elements is None:
             break
@@ -313,6 +329,7 @@ def main():
             lead.update({
                 "place_id": p["id"],
                 "business": p["name"],
+                "niche": p["niche"],
                 "website": p["website"],
                 "address": p["address"],
                 "lat": p["lat"],

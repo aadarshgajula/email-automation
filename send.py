@@ -56,12 +56,13 @@ def render(lead, followup=False):
         "website": lead["website"],
         "sender_name": SENDER_NAME,
     }
+    niche = lead.get("niche") or "interior_design"  # leads found before niches existed
     subject = templates.SUBJECT.format(**ctx)
     if followup:
         subject = "Re: " + subject
-        body = templates.FOLLOWUP_BODY.format(**ctx)
+        body = templates.FOLLOWUP_BODY[niche].format(**ctx)
     else:
-        body = templates.BODY.format(**ctx)
+        body = templates.BODY[niche].format(**ctx)
     body = body.rstrip() + "\n" + templates.FOOTER.format(sender_name=SENDER_NAME, postal_address=POSTAL)
     return subject, body
 
@@ -225,8 +226,11 @@ def require(*names):
 
 
 def template_ready():
-    if "[PASTE YOUR EMAIL BODY HERE]" in templates.BODY:
-        sys.exit("Paste your email text into templates.py before sending.")
+    for niche in config.NICHES:
+        if niche not in templates.BODY or niche not in templates.FOLLOWUP_BODY:
+            sys.exit(f"templates.py has no email for '{niche}'. Add one to BODY and FOLLOWUP_BODY.")
+        if "[PASTE YOUR EMAIL BODY HERE]" in templates.BODY[niche]:
+            sys.exit(f"Paste your '{niche}' email text into templates.py before sending.")
 
 
 def preview(leads):
@@ -238,7 +242,7 @@ def preview(leads):
     for l in ready:
         subject, body = render(l)
         local = utcnow().astimezone(ZoneInfo(l["timezone"] or "America/New_York"))
-        out(f"**To:** {l['email']} ({l['timezone']}, local time now {local:%a %H:%M})  ")
+        out(f"**To:** {l['email']} ({l.get('niche') or 'interior_design'}, {l['timezone']}, local time now {local:%a %H:%M})  ")
         out(f"**Subject:** {subject}\n")
         out("```\n" + body + "\n```\n")
 
@@ -246,17 +250,20 @@ def preview(leads):
 def test_send(leads):
     require("GMAIL_ADDRESS", "GMAIL_APP_PASSWORD", "SENDER_POSTAL_ADDRESS")
     template_ready()
-    lead = next((l for l in leads if l["status"] == "ready"), None)
-    if not lead:
-        lead = {"business": "Example Interiors", "website": "https://example.com", "email": SENDER,
-                "observation": "I ran your website through Google's mobile speed test and it scored 31 out of 100.",
-                "message_id": ""}
-    msg = build_message(lead, to=SENDER)
-    msg.replace_header("Subject", "[TEST] " + msg["Subject"])
     server = smtp_connect()
-    server.send_message(msg)
+    # One example email per niche, so you can check each template.
+    for niche in config.NICHES:
+        lead = next((l for l in leads if l["status"] == "ready" and l.get("niche") == niche), None)
+        if not lead:
+            lead = {"business": f"Example {niche.replace('_', ' ').title()}", "niche": niche,
+                    "website": "https://example.com", "email": SENDER, "message_id": "",
+                    "observation": "I ran your website through Google's mobile speed test and it scored 31 out of 100."}
+        msg = build_message(lead, to=SENDER)
+        msg.replace_header("Subject", f"[TEST {niche}] " + msg["Subject"])
+        server.send_message(msg)
+        out(f"Test email sent to {SENDER} ({niche}, written for {lead['business']}).")
     server.quit()
-    out(f"Test email sent to {SENDER} (written for {lead['business']}). Nothing else was sent.")
+    out("Nothing else was sent.")
 
 
 def run(leads, state):

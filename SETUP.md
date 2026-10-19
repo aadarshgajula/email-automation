@@ -1,7 +1,7 @@
 # Outreach automation: setup
 
 What it does, every weekday:
-1. Searches OpenStreetMap (free, no account) for interior designers, one US state at a time.
+1. Searches OpenStreetMap (free, no account) for plumbing companies and interior designers, one US state at a time.
 2. Visits each website, finds an email address, and checks the site (Google mobile speed score, https, old © year).
 3. Keeps only businesses whose site has a real issue, and writes one sentence about it into your email.
 4. Sends from your Gmail between 9:00 and 11:59 in **each business's own time zone**, Monday-Friday.
@@ -51,7 +51,7 @@ Secrets are encrypted. Nobody can view them after saving (not even you), they're
 
 ## 5. Add your email text
 
-Open `templates.py` on GitHub → pencil icon → replace `[PASTE YOUR EMAIL BODY HERE]` with your email → Commit. The opening line about their website is added above it automatically. Sending is blocked until you do this.
+`templates.py` already has two emails: one for plumbers (it links your example homepage) and one for interior designers (no link). To change the wording: open `templates.py` on GitHub → pencil icon → edit the text → Commit. The opening line about their website is added above it automatically.
 
 ## 6. Test, then switch it on
 
@@ -69,7 +69,7 @@ When you're happy: **Settings → Secrets and variables → Actions → Variable
 
 - **Replies arrive in your Gmail** like normal email. Answer them yourself; the system already stops emailing that person.
 - **See everything** in `leads.csv` in the repo (status, email, issue found, dates). Each run's summary on the Actions tab lists who was emailed.
-- **Change settings** in `config.py`: what to search for (`OSM_TAGS`, `OSM_NAME_PATTERN`), the order of states, daily limits, send window, follow-up delay.
+- **Change settings** in `config.py`: what to search for (`NICHES`), the order of states, daily limits, send window, follow-up delay.
 - **Running low on leads?** OpenStreetMap lists fewer US businesses than Google Maps, so the states may run out after a month or two. The run will say so. You can then widen the name search in `config.py` (for example add `home staging|decorator`), or reset `state_index` in `state.json` to 0 later to pick up newly mapped businesses.
 - **Warning signs**: several bounces in a day, or Gmail showing a sending-limit error in a run. Pause for a few days if that happens.
 

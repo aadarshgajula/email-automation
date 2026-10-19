@@ -1,12 +1,27 @@
 """Settings you can tweak. No secrets go in this file."""
 
 # --- Who to find (OpenStreetMap, free, no key) -----------------------------
-# OpenStreetMap tags that mean "interior designer". Each is "key=value".
-OSM_TAGS = ["office=interior_design", "shop=interior_decoration", "craft=interior_decorator"]
-# Also match businesses whose name contains these words (case-insensitive).
-OSM_NAME_PATTERN = "interior design|interiors|interior decorat"
-# Skip names containing these (car/boat upholsterers etc.).
-NAME_EXCLUDE = ["auto", "car ", "cars", "truck", "boat", "marine", "rv ", "aircraft", "jet"]
+# Each kind of business we look for. Every lead remembers which one it is, and
+# templates.py has a separate email for each.
+#   tags:    OpenStreetMap tags that mean this kind of business ("key=value")
+#   names:   also match business names containing these words (case-insensitive)
+#   exclude: skip names containing these
+# If a business matches more than one, the first one listed here wins.
+NICHES = {
+    "plumbing": {
+        "tags": ["craft=plumber"],
+        "names": "plumbing|plumber",
+        # supply stores/showrooms aren't plumbers; big franchises' sites are run by head office
+        "exclude": ["supply", "supplies", "wholesale", "showroom", "warehouse", "museum",
+                    "roto-rooter", "roto rooter", "mr. rooter", "mr rooter", "benjamin franklin"],
+    },
+    "interior_design": {
+        "tags": ["office=interior_design", "shop=interior_decoration", "craft=interior_decorator"],
+        "names": "interior design|interiors|interior decorat",
+        # car/boat upholsterers etc.
+        "exclude": ["auto", "car ", "cars", "truck", "boat", "marine", "rv ", "aircraft", "jet"],
+    },
+}
 
 # US states searched in order (biggest markets first), until the list runs out.
 STATES = [
