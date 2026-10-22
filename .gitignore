@@ -1,0 +1,22 @@
+# Secrets: never commit these (use GitHub Secrets or terminal variables instead)
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Half-written files from store.py's safe saves (leads.csv.tmp, state.json.tmp)
+*.tmp
+
+# Editors and macOS
+.vscode/
+.idea/
+.DS_Store
+
+# Note: leads.csv and state.json are NOT ignored on purpose.
+# The GitHub Action commits them after every run; that's how it remembers
+# who has already been emailed.
